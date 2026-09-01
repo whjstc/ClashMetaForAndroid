@@ -5,6 +5,10 @@ on:
     - cron: '0 2 * * *'  # 每天北京时间 10:00 检查一次
   workflow_dispatch:
 
+permissions:
+  contents: write
+  actions: write
+
 jobs:
   SyncUpstream:
     runs-on: ubuntu-latest
@@ -41,3 +45,10 @@ jobs:
         run: |
           git merge upstream/main --no-edit -m "chore: sync upstream $(git rev-parse --short upstream/main)"
           git push origin main
+
+      # GITHUB_TOKEN 的 push 不会触发其他 workflow，需显式 dispatch
+      - name: Trigger Pre-Release Build
+        if: steps.check.outputs.up_to_date == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run "Build Pre-Release" --ref main
